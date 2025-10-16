@@ -1,6 +1,7 @@
 flask
 gunicorn
 flask-sqlalchemy
-werkzeug
+qrcode
 pillow
-psycopg2-binary
+werkzeug
+python-dateutil
