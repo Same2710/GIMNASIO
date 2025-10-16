@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-user-circle"></i> Detalle de Membresía</h3>
+            </div>
+            <div class="card-body">
+                <!-- Información Personal -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-user me-2"></i>Información Personal
+                        </h5>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Nombre Completo:</label>
+                        <p class="form-control-plaintext">{{ membresia.nombre }} {{ membresia.apellidos }}</p>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Edad:</label>
+                        <p class="form-control-plaintext">{{ membresia.edad }} años</p>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">DNI:</label>
+                        <p class="form-control-plaintext">{{ membresia.dni }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Celular:</label>
+                        <p class="form-control-plaintext">{{ membresia.celular }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Email:</label>
+                        <p class="form-control-plaintext">{{ membresia.email }}</p>
+                    </div>
+                </div>
+
+                <!-- Información de Membresía -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-id-card me-2"></i>Información de Membresía
+                        </h5>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Tipo de Membresía:</label>
+                        <p>
+                            <span class="badge bg-info fs-6">{{ membresia.tipo_membresia }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Estado:</label>
+                        <p>
+                            {% if membresia.estado == 'Activa' %}
+                                <span class="badge bg-success fs-6">{{ membresia.estado }}</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">{{ membresia.estado }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">ID de Membresía:</label>
+                        <p class="form-control-plaintext">#{{ membresia.id }}</p>
+                    </div>
+                </div>
+
+                <!-- Fechas -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-calendar-alt me-2"></i>Fechas
+                        </h5>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Fecha de Inicio:</label>
+                        <p class="form-control-plaintext">{{ membresia.fecha_inicio.strftime('%d/%m/%Y') }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Fecha de Fin:</label>
+                        <p class="form-control-plaintext">{{ membresia.fecha_fin.strftime('%d/%m/%Y') }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Días Restantes:</label>
+                        <p class="form-control-plaintext">
+                            {% set dias_restantes = (membresia.fecha_fin - hoy).days %}
+                            {% if dias_restantes > 0 %}
+                                <span class="badge bg-success fs-6">{{ dias_restantes }} días</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">Expirada</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label fw-bold">Fecha de Registro:</label>
+                        <p class="form-control-plaintext">{{ membresia.fecha_registro.strftime('%d/%m/%Y %H:%M') }}</p>
+                    </div>
+                </div>
+
+                <!-- Resumen de Estado -->
+                <div class="alert 
+                    {% if membresia.estado == 'Activa' and (membresia.fecha_fin - hoy).days > 7 %}alert-success
+                    {% elif membresia.estado == 'Activa' and (membresia.fecha_fin - hoy).days <= 7 %}alert-warning
+                    {% else %}alert-danger{% endif %}">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6><i class="fas fa-info-circle me-2"></i>Resumen del Estado</h6>
+                            <p class="mb-0">
+                                {% if membresia.estado == 'Activa' %}
+                                    {% set dias_restantes = (membresia.fecha_fin - hoy).days %}
+                                    {% if dias_restantes > 30 %}
+                                        ✅ La membresía está <strong>ACTIVA</strong> y tiene {{ dias_restantes }} días restantes.
+                                    {% elif dias_restantes > 7 %}
+                                        ✅ La membresía está <strong>ACTIVA</strong> y tiene {{ dias_restantes }} días restantes.
+                                    {% else %}
+                                        ⚠️ La membresía está <strong>ACTIVA</strong> pero vence en {{ dias_restantes }} días.
+                                    {% endif %}
+                                {% else %}
+                                    ❌ La membresía está <strong>INACTIVA</strong>. Venció el {{ membresia.fecha_fin.strftime('%d/%m/%Y') }}.
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button onclick="verificarMembresia({{ membresia.id }})" class="btn btn-info">
+                                <i class="fas fa-sync-alt"></i> Verificar Ahora
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <a href="{{ url_for('listar_membresias') }}" class="btn btn-secondary me-md-2">
+                        <i class="fas fa-arrow-left"></i> Volver a la Lista
+                    </a>
+                    <a href="{{ url_for('editar_membresia', id=membresia.id) }}" class="btn btn-warning me-md-2">
+                        <i class="fas fa-edit"></i> Editar Membresía
+                    </a>
+                    <button onclick="verificarMembresia({{ membresia.id }})" class="btn btn-info me-md-2">
+                        <i class="fas fa-check"></i> Verificar Estado
+                    </button>
+                    <a href="{{ url_for('eliminar_membresia', id=membresia.id) }}" 
+                       class="btn btn-danger"
+                       onclick="return confirm('¿Estás seguro de eliminar la membresía de {{ membresia.nombre }} {{ membresia.apellidos }}?')">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Pasar la fecha actual del servidor al template
+    const hoy = new Date('{{ hoy.strftime("%Y-%m-%d") }}');
+</script>
+{% endblock %}

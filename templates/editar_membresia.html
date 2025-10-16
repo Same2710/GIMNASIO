@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h3 class="mb-0"><i class="fas fa-edit"></i> Editar Membresía</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="formEditarMembresia">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre" class="form-label">Nombre *</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" 
+                                   value="{{ membresia.nombre }}" required maxlength="100">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="apellidos" class="form-label">Apellidos *</label>
+                            <input type="text" class="form-control" id="apellidos" name="apellidos" 
+                                   value="{{ membresia.apellidos }}" required maxlength="100">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="edad" class="form-label">Edad *</label>
+                            <input type="number" class="form-control" id="edad" name="edad" 
+                                   value="{{ membresia.edad }}" required min="16" max="100">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="dni" class="form-label">DNI *</label>
+                            <input type="text" class="form-control" id="dni" name="dni" 
+                                   value="{{ membresia.dni }}" required pattern="[0-9]{8}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="celular" class="form-label">Celular *</label>
+                            <input type="tel" class="form-control" id="celular" name="celular" 
+                                   value="{{ membresia.celular }}" required pattern="[0-9]{9}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ membresia.email }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tipo_membresia" class="form-label">Tipo de Membresía *</label>
+                            <select class="form-select" id="tipo_membresia" name="tipo_membresia" required>
+                                <option value="Mensual" {% if membresia.tipo_membresia == 'Mensual' %}selected{% endif %}>Mensual - 30 días</option>
+                                <option value="Trimestral" {% if membresia.tipo_membresia == 'Trimestral' %}selected{% endif %}>Trimestral - 90 días</option>
+                                <option value="Semestral" {% if membresia.tipo_membresia == 'Semestral' %}selected{% endif %}>Semestral - 180 días</option>
+                                <option value="Anual" {% if membresia.tipo_membresia == 'Anual' %}selected{% endif %}>Anual - 365 días</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" 
+                                   value="{{ membresia.fecha_inicio.strftime('%Y-%m-%d') }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Información Actual:</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Estado:</strong> 
+                                    {% if membresia.estado == 'Activa' %}
+                                        <span class="badge bg-success">{{ membresia.estado }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{{ membresia.estado }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Fecha de fin:</strong> {{ membresia.fecha_fin.strftime('%d/%m/%Y') }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Registro:</strong> {{ membresia.fecha_registro.strftime('%d/%m/%Y %H:%M') }}
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Al cambiar el tipo de membresía o fecha de inicio, la fecha de fin se recalculará automáticamente.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('listar_membresias') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-arrow-left"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Actualizar Membresía
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Validación del formulario de edición
+    document.getElementById('formEditarMembresia').addEventListener('submit', function(e) {
+        const edad = document.getElementById('edad').value;
+        const dni = document.getElementById('dni').value;
+        const celular = document.getElementById('celular').value;
+        
+        if (edad < 16 || edad > 100) {
+            alert('La edad debe estar entre 16 y 100 años');
+            e.preventDefault();
+            return false;
+        }
+        
+        if (!/^\d{8}$/.test(dni)) {
+            alert('El DNI debe tener exactamente 8 dígitos numéricos');
+            e.preventDefault();
+            return false;
+        }
+        
+        if (!/^\d{9}$/.test(celular)) {
+            alert('El celular debe tener exactamente 9 dígitos numéricos');
+            e.preventDefault();
+            return false;
+        }
+        
+        // Confirmación antes de guardar cambios
+        if (!confirm('¿Estás seguro de que deseas guardar los cambios?')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+</script>
+{% endblock %}

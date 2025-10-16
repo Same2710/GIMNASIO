@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="container">
+        <h1 class="display-4 fw-bold">🏋️ Control Fit Gym</h1>
+        <p class="lead">Sistema de Gestión de Membresías Profesional</p>
+        <a href="{{ url_for('agregar_membresia') }}" class="btn btn-success btn-lg mt-3">
+            <i class="fas fa-user-plus"></i> Agregar Nueva Membresía
+        </a>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-5">
+    <div class="col-md-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="feature-icon text-primary">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3 class="stats-number">{{ total_membresias }}</h3>
+                <p class="text-muted">Total de Membresías</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="feature-icon text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3 class="stats-number">{{ membresias_activas }}</h3>
+                <p class="text-muted">Membresías Activas</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="feature-icon text-danger">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <h3 class="stats-number">{{ membresias_inactivas }}</h3>
+                <p class="text-muted">Membresías Inactivas</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Características -->
+<div class="row text-center mb-5">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="feature-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <h5>Registro Completo</h5>
+                <p class="text-muted">Nombre, apellidos, edad, DNI, celular y email</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="feature-icon">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <h5>Estado Automático</h5>
+                <p class="text-muted">Verificación automática Activa/Inactiva</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="feature-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h5>Búsqueda Avanzada</h5>
+                <p class="text-muted">Busca por nombre, DNI, email o celular</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="feature-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <h5>Base de Datos Segura</h5>
+                <p class="text-muted">SQLite con validación de datos única</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Últimas Membresías -->
+{% if ultimas_membresias %}
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-clock"></i> Últimas Membresías Registradas</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Celular</th>
+                                <th>Tipo</th>
+                                <th>Fecha Inicio</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for membresia in ultimas_membresias %}
+                            <tr>
+                                <td>
+                                    <strong>{{ membresia.nombre }} {{ membresia.apellidos }}</strong>
+                                </td>
+                                <td>{{ membresia.dni }}</td>
+                                <td>{{ membresia.celular }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ membresia.tipo_membresia }}</span>
+                                </td>
+                                <td>{{ membresia.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    {% if membresia.estado == 'Activa' %}
+                                        <span class="badge bg-success">{{ membresia.estado }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{{ membresia.estado }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Acciones Rápidas -->
+<div class="row mt-5">
+    <div class="col-12 text-center">
+        <h3>Acciones Rápidas</h3>
+        <div class="mt-4">
+            <a href="{{ url_for('listar_membresias') }}" class="btn btn-primary btn-lg me-3">
+                <i class="fas fa-list"></i> Ver Todas las Membresías
+            </a>
+            <a href="{{ url_for('agregar_membresia') }}" class="btn btn-success btn-lg me-3">
+                <i class="fas fa-user-plus"></i> Agregar Nueva
+            </a>
+            <a href="{{ url_for('verificar_todas') }}" class="btn btn-warning btn-lg">
+                <i class="fas fa-sync-alt"></i> Verificar Todas
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

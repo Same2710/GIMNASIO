@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0"><i class="fas fa-user-plus"></i> Agregar Nueva Membresía</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="formMembresia">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre" class="form-label">Nombre *</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" required 
+                                   placeholder="Ingrese el nombre" maxlength="100">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="apellidos" class="form-label">Apellidos *</label>
+                            <input type="text" class="form-control" id="apellidos" name="apellidos" required 
+                                   placeholder="Ingrese los apellidos" maxlength="100">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="edad" class="form-label">Edad *</label>
+                            <input type="number" class="form-control" id="edad" name="edad" required 
+                                   min="16" max="100" placeholder="Ej: 25">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="dni" class="form-label">DNI *</label>
+                            <input type="text" class="form-control" id="dni" name="dni" required 
+                                   placeholder="Ej: 12345678" pattern="[0-9]{8}" title="8 dígitos numéricos">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="celular" class="form-label">Celular *</label>
+                            <input type="tel" class="form-control" id="celular" name="celular" required 
+                                   placeholder="Ej: 987654321" pattern="[0-9]{9}" title="9 dígitos numéricos">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="email" name="email" required 
+                                   placeholder="ejemplo@correo.com">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tipo_membresia" class="form-label">Tipo de Membresía *</label>
+                            <select class="form-select" id="tipo_membresia" name="tipo_membresia" required>
+                                <option value="">Seleccionar tipo...</option>
+                                <option value="Mensual">Mensual - 30 días</option>
+                                <option value="Trimestral">Trimestral - 90 días</option>
+                                <option value="Semestral">Semestral - 180 días</option>
+                                <option value="Anual">Anual - 365 días</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Información:</h6>
+                        <ul class="mb-0">
+                            <li>La fecha de fin se calculará automáticamente según el tipo de membresía</li>
+                            <li>El estado (Activa/Inactiva) se determinará por la fecha de vencimiento</li>
+                            <li>Los campos marcados con * son obligatorios</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('listar_membresias') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-arrow-left"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Guardar Membresía
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Establecer fecha actual como valor por defecto
+    document.getElementById('fecha_inicio').valueAsDate = new Date();
+    
+    // Validación del formulario
+    document.getElementById('formMembresia').addEventListener('submit', function(e) {
+        const edad = document.getElementById('edad').value;
+        const dni = document.getElementById('dni').value;
+        const celular = document.getElementById('celular').value;
+        
+        if (edad < 16 || edad > 100) {
+            alert('La edad debe estar entre 16 y 100 años');
+            e.preventDefault();
+            return false;
+        }
+        
+        if (!/^\d{8}$/.test(dni)) {
+            alert('El DNI debe tener exactamente 8 dígitos numéricos');
+            e.preventDefault();
+            return false;
+        }
+        
+        if (!/^\d{9}$/.test(celular)) {
+            alert('El celular debe tener exactamente 9 dígitos numéricos');
+            e.preventDefault();
+            return false;
+        }
+    });
+</script>
+{% endblock %}
