@@ -1,2 +1,6 @@
 flask
 gunicorn
+flask-sqlalchemy
+werkzeug
+pillow
+psycopg2-binary
