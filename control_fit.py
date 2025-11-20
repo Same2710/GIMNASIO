@@ -8,7 +8,11 @@ from werkzeug.utils import secure_filename
 import qrcode
 from io import BytesIO
 import base64
-
+import os
+from datetime import datetime
+from flask import request, flash, redirect, url_for
+from flask import render_template_string
+from datetime import datetime
 # Configuración mínima
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'clave_super_secreta_control_fit_2024'
@@ -485,230 +489,182 @@ PLANES_HTML = '''
 
 PAGO_HTML = '''
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Pago - Control Fit</title>
     <meta charset="UTF-8">
+    <title>Pago - Control Fit Gym</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        .payment-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-bottom: 40px;
-        }
-        .qr-section, .upload-section {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 10px;
-        }
-        .qr-code {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .qr-placeholder {
-            width: 200px;
-            height: 200px;
-            background: #e9ecef;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            font-size: 14px;
-            color: #666;
-        }
-        .account-info {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        .account-detail {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .upload-area {
-            border: 2px dashed #667eea;
-            border-radius: 10px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 20px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .upload-area:hover {
-            background: #f0f4ff;
-        }
-        .btn {
-            padding: 12px 25px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-        .user-info {
-            background: #34495e;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-        .logout-btn {
-            background: #e74c3c;
-            padding: 8px 15px;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            float: right;
-        }
-        .plan-summary {
-            background: #e8f5e8;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; font-family: 'Segoe UI', sans-serif; }
+        .card { border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
+        .opcion { background: white; border-radius: 18px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); height: 100%; }
+        .upload-area { border: 3px dashed #ffc107; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer; background: #fffbeb; transition: 0.3s; }
+        .upload-area:hover { background: #fff3cd; border-color: #ffa500; }
+        .btn-culqi { background: linear-gradient(45deg, #667eea, #764ba2); color: white; font-weight: bold; }
+        .qr-img { max-height: 280px; border-radius: 15px; border: 6px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            👤 {{ user_nombre }} - Plan: {{ plan_info.nombre }}
-            <a href="/planes" class="logout-btn" style="background: #3498db; margin-right: 10px;">← Volver</a>
-            <a href="/logout" class="logout-btn">🚪 Cerrar Sesión</a>
+<div class="container my-5">
+    <div class="card">
+        <div class="card-header bg-primary text-white text-center py-4">
+            <h2>SELECCIONA TU MÉTODO DE PAGO</h2>
+            <h4>{{ plan_info.nombre }} → S/ {{ plan_info.precio }}</h4>
         </div>
-        
-        <div class="header">
-            <h1>💳 PAGO DE MEMBRESÍA</h1>
-            <p>Realiza el pago y sube tu comprobante para activar tu membresía</p>
-        </div>
-        
-        <div class="plan-summary">
-            <h3>📋 Resumen de tu compra:</h3>
-            <p><strong>Plan:</strong> {{ plan_info.nombre }}</p>
-            <p><strong>Duración:</strong> {{ plan_info.duracion }}</p>
-            <p><strong>Precio:</strong> S/ {{ plan_info.precio }}</p>
-            <p><strong>Fecha de vencimiento:</strong> {{ plan_info.vencimiento }}</p>
-        </div>
-        
-        <div class="payment-info">
-            <div class="qr-section">
-                <h3>📱 Pago con Yape</h3>
-                <div class="qr-code">
-                    <div class="qr-placeholder">
-                        [CÓDIGO QR YAPE]<br>
-                        948315642
+        <div class="card-body p-5">
+            <div class="row g-4">
+
+                <!-- 1. YAPE / TRANSFERENCIA -->
+                <div class="col-lg-4">
+                    <div class="opcion text-center">
+                        <h4 class="text-success mb-4">YAPE / TRANSFERENCIA</h4>
+                        <img src="{{ url_for('static', filename='img/qr_pago_gimnasio.jpg') }}" class="qr-img img-fluid">
+                        <p class="mt-3 fw-bold text-danger fs-3">987 654 321</p>
+                        <hr>
+                        <small class="text-muted">
+                            Yape/Plin: 987 654 321<br>
+                            BCP: 191-45678923-0-15<br>
+                            Titular: GIMNASIO FITPOWER SAC
+                        </small>
                     </div>
                 </div>
-                <div class="account-info">
-                    <h4>💳 Datos para transferencia:</h4>
-                    <div class="account-detail">
-                        <span>Banco:</span>
-                        <span>BCP</span>
-                    </div>
-                    <div class="account-detail">
-                        <span>N° Cuenta:</span>
-                        <span>191-45678923-0-15</span>
-                    </div>
-                    <div class="account-detail">
-                        <span>Titular:</span>
-                        <span>CONTROL FIT GYM</span>
-                    </div>
-                    <div class="account-detail">
-                        <span>Yape:</span>
-                        <span>948315642</span>
-                    </div>
-                    <div class="account-detail">
-                        <span>Plin:</span>
-                        <span>948315642</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="upload-section">
-                <h3>📤 Subir Comprobante</h3>
-                <p>Una vez realizado el pago, sube una foto o captura de pantalla de tu comprobante:</p>
-                
-                <form method="POST" action="/subir-comprobante" enctype="multipart/form-data">
-                    <input type="hidden" name="plan" value="{{ plan_info.tipo }}">
-                    <input type="hidden" name="precio" value="{{ plan_info.precio }}">
-                    
-                    <div class="upload-area" onclick="document.getElementById('comprobante').click()">
-                        <div style="font-size: 48px;">📁</div>
-                        <p>Haz clic aquí para seleccionar tu comprobante</p>
-                        <p style="font-size: 12px; color: #666;">Formatos: JPG, PNG, PDF (Máx. 16MB)</p>
-                    </div>
-                    
-                    <input type="file" id="comprobante" name="comprobante" 
-                           accept=".jpg,.jpeg,.png,.pdf" required 
-                           style="display: none;" onchange="previewFile()">
-                    
-                    <div id="file-preview" style="margin-top: 20px;"></div>
-                    
-                    <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">
-                        ✅ ENVIAR COMPROBANTE
-                    </button>
-                </form>
+
+                <!-- 2. TARJETA (CULQI) -->
+<div class="col-lg-4">
+    <div class="opcion">
+        <h4 class="text-primary text-center mb-4">TARJETA</h4>
+
+        <div class="text-center mb-4">
+            <img src="{{url_for('static', filename='img/culqi-logo.png')}}" height="30">
+            <div class="d-flex justify-content-center gap-3">
+                <img src="{{ url_for('static', filename='img/visa.png') }}" height="38">
+                <img src="{{ url_for('static', filename='img/mastercard.png') }}" height="38">
             </div>
         </div>
-        
-        <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-top: 20px;">
-            <h4>📝 Instrucciones importantes:</h4>
-            <ul>
-                <li>Realiza el pago exacto del monto indicado</li>
-                <li>Incluye tu nombre y DNI en el concepto del pago</li>
-                <li>Sube una imagen clara del comprobante</li>
-                <li>Tu membresía se activará en 24 horas después de la verificación</li>
-                <li>Recibirás un código QR de acceso una vez verificado el pago</li>
-            </ul>
+
+        <form id="culqi-form">
+
+            <!-- ⭐ NÚMERO DE TARJETA -->
+            <label class="form-label fw-bold">Número de Tarjeta</label>
+            <div class="mb-3">
+                <div id="card-number" class="form-control p-3" style="height:50px;"></div>
+            </div>
+
+            <!-- ⭐ NOMBRE DEL TITULAR -->
+            <label class="form-label fw-bold">Nombre del Titular</label>
+            <div class="mb-3">
+                <input type="text" id="card-name" class="form-control" placeholder="Nombre del titular" required>
+            </div>
+
+            <div class="row">
+
+                <!-- ⭐ FECHA DE VENCIMIENTO -->
+                <div class="col-6">
+                    <label class="form-label fw-bold">Fecha de Vencimiento</label>
+                    <div id="card-expiry" class="form-control p-3" style="height:50px;"></div>
+                </div>
+
+                <!-- ⭐ CVV -->
+                <div class="col-6">
+                    <label class="form-label fw-bold">CVV</label>
+                    <div id="card-cvv" class="form-control p-3" style="height:50px;"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-culqi w-100 mt-3 py-3 fw-bold">
+                PAGAR S/ {{ plan_info.precio }}
+            </button>
+        </form>
+    </div>
+</div>
+
+                <!-- 3. SUBIR COMPROBANTE (TU DISEÑO ORIGINAL QUE TE GUSTABA) -->
+                <div class="col-lg-4">
+                    <div class="opcion">
+                        <h4 class="text-warning text-center mb-4">SUBIR COMPROBANTE</h4>
+                        <form method="POST" action="/subir-comprobante" enctype="multipart/form-data">
+                            <input type="hidden" name="plan" value="{{ plan_info.tipo }}">
+                            <input type="hidden" name="precio" value="{{ plan_info.precio }}">
+
+                            <div class="upload-area" onclick="document.getElementById('comprobante').click()">
+                                <div style="font-size: 60px;">Subir</div>
+                                <p class="fw-bold mt-3">Haz clic para seleccionar tu comprobante</p>
+                                <p style="font-size: 13px; color: #666;">JPG, PNG o PDF · Máx. 16MB</p>
+                            </div>
+
+                            <input type="file" id="comprobante" name="comprobante"
+                                   accept=".jpg,.jpeg,.png,.pdf" required
+                                   style="display: none;" onchange="previewFile(event)">
+
+                            <div id="file-preview" class="text-center mt-3"></div>
+
+                            <button type="submit" class="btn btn-warning w-100 mt-4 py-3 fw-bold text-white">
+                                ENVIAR COMPROBANTE
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/planes" class="btn btn-outline-light btn-lg">Volver a planes</a>
+            </div>
         </div>
     </div>
-    
-    <script>
-        function previewFile() {
-            const file = document.getElementById('comprobante').files[0];
-            const preview = document.getElementById('file-preview');
-            
-            if (file) {
-                preview.innerHTML = `
-                    <div style="background: #e8f5e8; padding: 10px; border-radius: 5px;">
-                        <strong>Archivo seleccionado:</strong> ${file.name}<br>
-                        <strong>Tamaño:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB
-                    </div>
-                `;
+</div>
+
+<script src="https://checkout.culqi.com/js/v4"></script>
+<script>
+Culqi.publicKey = 'pk_test_46Z9L4qO8lY2nr7v';
+Culqi.settings({ title: 'Control Fit Gym', currency: 'PEN', description: '{{ plan_info.nombre }}', amount: {{ (plan_info.precio | replace(".", "") | int) * 100 }} });
+Culqi.init();
+
+window.addEventListener('load', () => {
+    Culqi.createCardNumberElement(document.getElementById('card-number'));
+    Culqi.createCardExpiryElement(document.getElementById('card-expiry'));
+    Culqi.createCardCvvElement(document.getElementById('card-cvv'));
+});
+
+document.getElementById('culqi-form').onsubmit = e => { e.preventDefault(); Culqi.createToken(); };
+
+function culqi() {
+    if (Culqi.token) {
+        fetch('/procesar-pago-culqi', { method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ token: Culqi.token.id, plan: '{{ plan_info.tipo }}', precio: '{{ plan_info.precio }}' })
+        }).then(r => r.json()).then(data => {
+            if (data.success) { alert('¡Pago exitoso!'); location.href = '/usuario'; }
+            else { alert('Error: ' + data.error); }
+        });
+    } else if (Culqi.error) { alert(Culqi.error.user_message); }
+}
+
+// Vista previa del comprobante
+function previewFile(event) {
+    const preview = document.getElementById('file-preview');
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (file.type.startsWith('image/')) {
+                preview.innerHTML = `<img src="${reader.result}" style="max-width:100%; border-radius:12px; margin-top:10px; box-shadow:0 5px 15px rgba(0,0,0,0.2);">`;
+            } else {
+                preview.innerHTML = `<p class="text-success fw-bold mt-3">PDF listo: ${file.name}</p>`;
             }
         }
-    </script>
+        reader.readAsDataURL(file);
+    }
+}
+</script>
 </body>
 </html>
 '''
+
+
+
+
+
 
 USUARIO_HTML = '''
 <!DOCTYPE html>
@@ -716,78 +672,115 @@ USUARIO_HTML = '''
 <head>
     <meta charset="UTF-8">
     <title>Perfil - Control Fit</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial; background: #f2f4f7; padding: 20px; }
-        .card { max-width: 700px; margin: 30px auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
-        h2 { text-align: center; color: #333; margin-bottom: 10px; }
-        .row { display:flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-        .label { color: #555; font-weight: bold; width: 45%; }
-        .value { color: #333; width: 50%; }
-        .btn { display:block; width: 100%; padding:10px; margin-top:15px; text-align:center; background:#3b82f6; color:white; text-decoration:none; border-radius:6px; }
-        .user-header { background: #34495e; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-        .qr-section { text-align: center; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; }
-        .qr-code { width: 200px; height: 200px; background: #e9ecef; margin: 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
-        .status-pendiente { color: #f39c12; font-weight: bold; }
-        .status-activo { color: #27ae60; font-weight: bold; }
-        .status-inactivo { color: #e74c3c; font-weight: bold; }
-        .qr-image { max-width: 200px; max-height: 200px; }
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; 
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .card { 
+            max-width: 740px; margin: 40px auto; 
+            border: none; border-radius: 24px; 
+            overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+        }
+        .header-profile {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white; padding: 35px; text-align: center;
+        }
+        .header-profile h2 { margin: 0; font-size: 2.2rem; }
+        .info-row { 
+            padding: 16px 25px; border-bottom: 1px solid #eee; 
+            display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem;
+        }
+        .label { font-weight: 600; color: #444; }
+        .value { color: #2c3e50; font-weight: 500; }
+
+        /* CUENTA REGRESIVA PREMIUM */
+        .countdown-card {
+            margin: 30px 25px; padding: 28px; border-radius: 20px;
+            text-align: center; color: white; font-weight: bold;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+        }
+        .countdown-ok     { background: linear-gradient(135deg, #56ab2f, #a8e063); }
+        .countdown-alert  { background: linear-gradient(135deg, #f39c12, #f1c40f); color: #2c3e50; }
+        .countdown-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .countdown-card h3 { margin: 0 0 12px 0; font-size: 1.5rem; opacity: 0.95; }
+        .countdown-card .time { font-size: 4rem; margin: 0; letter-spacing: 4px; }
+
+        .qr-section { background: #f8f9fa; padding: 35px; border-radius: 20px; margin: 30px 25px; text-align: center; }
+        .qr-image { 
+            max-width: 260px; max-height: 260px; padding: 15px; background: white; 
+            border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .btn-renovar {
+            display: block; width: 88%; margin: 25px auto; padding: 18px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white; font-weight: bold; font-size: 1.3rem; border-radius: 16px;
+            text-align: center; text-decoration: none; box-shadow: 0 10px 25px rgba(39,174,96,0.4);
+            transition: all 0.3s;
+        }
+        .btn-renovar:hover { transform: translateY(-4px); box-shadow: 0 15px 30px rgba(39,174,96,0.5); }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="user-header">
-            <h2>👤 Perfil del Socio</h2>
-            <p>Bienvenido, <strong>{{ miembro.nombre }}</strong></p>
+        <div class="header-profile">
+            <h2><i class="fas fa-user-circle fa-2x"></i> Perfil del Socio</h2>
+            <p class="mt-2 fs-3">¡Hola, <strong>{{ miembro.nombre }} {{ miembro.apellidos or '' }}</strong>!</p>
         </div>
-        
-        <div class="row"><div class="label">Nombre</div><div class="value">{{ miembro.nombre }} {{ miembro.apellidos or '' }}</div></div>
-        <div class="row"><div class="label">Email</div><div class="value">{{ miembro.email }}</div></div>
-        <div class="row"><div class="label">DNI</div><div class="value">{{ miembro.dni or '-' }}</div></div>
-        <div class="row"><div class="label">Celular</div><div class="value">{{ miembro.celular or '-' }}</div></div>
-        <div class="row"><div class="label">Tipo Membresía</div><div class="value">{{ miembro.tipo_membresia or 'Por seleccionar' }}</div></div>
-        <div class="row"><div class="label">Fecha de ingreso</div><div class="value">{{ miembro.fecha_inicio or '-' }}</div></div>
-        <div class="row"><div class="label">Fecha de vencimiento</div><div class="value">{{ miembro.fecha_fin or '-' }}</div></div>
-        <div class="row"><div class="label">Estado de pago</div>
-            <div class="value">
-                {% if miembro.pago_verificado %}
-                    <span class="status-activo">✅ VERIFICADO</span>
-                {% elif miembro.comprobante_path %}
-                    <span class="status-pendiente">⏳ EN REVISIÓN</span>
-                {% else %}
-                    <span class="status-inactivo">❌ PENDIENTE</span>
-                {% endif %}
+
+        <div class="container-fluid px-4 py-3">
+            <div class="info-row"><span class="label"><i class="fas fa-envelope"></i> Email</span><span class="value">{{ miembro.email }}</span></div>
+            <div class="info-row"><span class="label"><i class="fas fa-id-card"></i> DNI</span><span class="value">{{ miembro.dni or '-' }}</span></div>
+            <div class="info-row"><span class="label"><i class="fas fa-phone"></i> Celular</span><span class="value">{{ miembro.celular or '-' }}</span></div>
+            <div class="info-row"><span class="label"><i class="fas fa-dumbbell"></i> Plan</span><span class="value fw-bold text-primary">{{ miembro.tipo_membresia or 'Sin plan' }}</span></div>
+            <div class="info-row"><span class="label"><i class="fas fa-calendar-check"></i> Inicio</span><span class="value">{{ miembro.fecha_inicio or '-' }}</span></div>
+            <div class="info-row"><span class="label"><i class="fas fa-calendar-times text-danger"></i> Vence</span><span class="value fw-bold text-danger">{{ miembro.fecha_fin or '-' }}</span></div>
+            <div class="info-row"><span class="label"><i class="fas fa-money-check-alt"></i> Pago</span>
+                <span class="value">
+                    {% if miembro.pago_verificado %}    <span class="text-success fw-bold"><i class="fas fa-check-circle"></i> VERIFICADO</span>
+                    {% elif miembro.comprobante_path %} <span class="text-warning fw-bold"><i class="fas fa-clock"></i> EN REVISIÓN</span>
+                    {% else %}                          <span class="text-danger fw-bold"><i class="fas fa-times-circle"></i> PENDIENTE</span>
+                    {% endif %}
+                </span>
             </div>
-        </div>
-        <div class="row"><div class="label">Estado membresía</div>
-            <div class="value">
-                <span style="color: {{ 'green' if miembro.estado == 'Activa' else 'red' }}; font-weight: bold;">
+            <div class="info-row"><span class="label"><i class="fas fa-running"></i> Estado</span>
+                <span class="value fw-bold" style="color: {{ 'green' if miembro.estado == 'Activa' else '#e74c3c' }};">
                     {{ miembro.estado or 'Inactiva' }}
                 </span>
             </div>
-        </div>
 
-        {% if miembro.pago_verificado and miembro.estado == 'Activa' %}
-        <div class="qr-section">
-            <h3>🎫 Tu Código QR de Acceso</h3>
-            {% if qr_image %}
-                <img src="{{ qr_image }}" alt="Código QR" class="qr-image">
-                <p style="margin-top: 10px; font-size: 12px; color: #666;">
-                    Muestra este código QR en recepción para ingresar al gimnasio
-                </p>
-            {% else %}
-                <div class="qr-code">
-                    CÓDIGO QR<br>
-                    {{ miembro.id }}-{{ miembro.dni }}
-                </div>
+            <!-- CUENTA REGRESIVA -->
+            {{ countdown | safe }}
+
+            <!-- QR -->
+            {% if miembro.pago_verificado and miembro.estado == 'Activa' %}
+            <div class="qr-section">
+                <h3 class="mb-4"><i class="fas fa-qrcode fa-2x"></i><br>Tu Código QR de Acceso</h3>
+                {% if qr_image %}
+                    <img src="{{ qr_image }}" class="qr-image" alt="QR">
+                {% else %}
+                    <div style="width:260px;height:260px;background:#ddd;margin:0 auto;border-radius:20px;display:flex;align-items:center;justify-content:center;color:#666;font-size:1.2rem;">
+                        QR NO GENERADO
+                    </div>
+                {% endif %}
+                <p class="mt-3 text-muted">Muéstralo en recepción para entrar</p>
+            </div>
             {% endif %}
-        </div>
-        {% elif not miembro.pago_verificado %}
-        <div style="text-align: center; margin: 20px 0;">
-            <a href="/planes" class="btn" style="background: #27ae60;">🎯 ELEGIR PLAN DE MEMBRESÍA</a>
-        </div>
-        {% endif %}
 
-        <a class="btn" href="/logout">Cerrar sesión</a>
+            <!-- BOTÓN RENOVAR SIEMPRE VISIBLE -->
+            <a href="/planes" class="btn-renovar">
+                RENOVAR O CAMBIAR MI PLAN
+            </a>
+
+            <a href="/logout" class="btn btn-outline-light d-block w-88 mx-auto mb-4 text-center px-4 py-3 rounded-pill">
+                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+            </a>
+        </div>
     </div>
 </body>
 </html>
@@ -850,6 +843,7 @@ MEMBRESIAS_HTML = '''
                         <th>Membresía</th>
                         <th>Estado Pago</th>
                         <th>Estado</th>
+                        <th>Días Restantes</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -876,6 +870,24 @@ MEMBRESIAS_HTML = '''
                                 {{ miembro.estado or 'Inactiva' }}
                             </span>
                         </td>
+                        <td>
+        {% if miembro.fecha_fin %}
+            {% set dias = (miembro.fecha_fin - now).days %}
+
+            {% if dias > 5 %}
+                <span class="text-success fw-bold">{{ dias }} días</span>
+            {% elif dias >= 1 %}
+                <span class="text-warning fw-bold">{{ dias }} días</span>
+            {% elif dias == 0 %}
+                <span class="text-danger fw-bold">Hoy vence</span>
+            {% else %}
+                <span class="text-danger fw-bold">Vencido</span>
+            {% endif %}
+        {% else %}
+            <span class="text-muted">—</span>
+        {% endif %}
+    </td>
+
                         <td>
                             <div class="action-buttons">
                                 {% if miembro.comprobante_path and not miembro.pago_verificado %}
@@ -969,11 +981,20 @@ VERIFICAR_PAGOS_HTML = '''
                         <strong>DNI:</strong> {{ pago.dni or '-' }}<br>
                         <strong>Plan:</strong> {{ pago.plan_seleccionado or pago.tipo_membresia }}<br>
                         <strong>Fecha de Pago:</strong> {{ pago.fecha_pago.strftime('%d/%m/%Y %H:%M') if pago.fecha_pago else 'No registrada' }}<br>
-                        <strong>Comprobante:</strong>
+
+                        <strong>Comprobante:</strong><br>
                         {% if pago.comprobante_path %}
-                            <br><img src="/uploads/{{ pago.comprobante_path.split('/')[-1] }}" alt="Comprobante" class="comprobante-img">
+                            {% set filename = pago.comprobante_path %}
+                            <a href="{{ url_for('serve_uploaded_file', filename=filename) }}" target="_blank">
+                                <img src="{{ url_for('serve_uploaded_file', filename=filename) }}" 
+                                     alt="Comprobante de {{ pago.nombre }}" 
+                                     class="comprobante-img"
+                                     style="max-width: 300px; border-radius: 10px; border: 3px solid #ffc107;
+                                            box-shadow: 0 5px 20px rgba(0,0,0,0.3); cursor: zoom-in;">
+                            </a>
+                            <br><small class="text-success">Click en la imagen para verla grande</small>
                         {% else %}
-                            No disponible
+                            <span class="text-muted">No disponible</span>
                         {% endif %}
                     </div>
                     
@@ -991,6 +1012,7 @@ VERIFICAR_PAGOS_HTML = '''
 </body>
 </html>
 '''
+
 
 EDITAR_MIEMBRO_HTML = '''
 <!DOCTYPE html>
@@ -1863,7 +1885,6 @@ def seleccionar_plan():
                                     'precio': precio,
                                     'vencimiento': fecha_vencimiento
                                 })
-
 @app.route('/subir-comprobante', methods=['POST'])
 @login_required
 def subir_comprobante():
@@ -1871,52 +1892,87 @@ def subir_comprobante():
         return redirect('/')
     
     if 'comprobante' not in request.files:
-        return "No se seleccionó ningún archivo", 400
+        return "No se seleccionó archivo", 400
     
     file = request.files['comprobante']
     if file.filename == '':
-        return "No se seleccionó ningún archivo", 400
+        return "No se seleccionó archivo", 400
     
     if file:
-        filename = secure_filename(f"{session['user_id']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
+        # NOMBRE LIMPIO
+        filename = secure_filename(
+            f"{session['user_id']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+        )
+
+        # RUTA COMPLETA DONDE SE GUARDARÁ
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+        # GUARDAR ARCHIVO EN /uploads/
+        file.save(upload_path)
+
+        # GUARDAR SOLO EL NOMBRE EN LA BD (NO LA RUTA COMPLETA)
         miembro = Miembro.query.get(session['user_id'])
-        if miembro:
-            plan = request.form['plan']
-            planes_map = {
-                '1_mes': {'nombre': '1 Mes', 'dias': 30},
-                '3_meses': {'nombre': '3 Meses', 'dias': 90},
-                '6_meses': {'nombre': '6 Meses', 'dias': 180},
-                '1_anio': {'nombre': '1 Año', 'dias': 365}
-            }
-            
-            plan_info = planes_map.get(plan, {})
-            miembro.plan_seleccionado = plan_info.get('nombre', '')
-            miembro.tipo_membresia = plan_info.get('nombre', '')
-            miembro.comprobante_path = filepath
-            miembro.pago_verificado = False
-            miembro.fecha_pago = datetime.now()
-            miembro.fecha_inicio = datetime.now().strftime('%Y-%m-%d')
-            miembro.fecha_fin = (datetime.now() + timedelta(days=plan_info.get('dias', 30))).strftime('%Y-%m-%d')
-            miembro.estado = 'Pendiente'
-            
-            db.session.commit()
-        
+        miembro.comprobante_path = filename     # ← IMPORTANTE
+        miembro.pago_verificado = False
+        miembro.fecha_pago = datetime.now()
+        miembro.estado = 'Pendiente'
+
+        db.session.commit()
         return redirect('/usuario')
-    
-    return "Error al subir el archivo", 400
+
+    return "Error inesperado", 500
+
+
+    # Si es GET, mostrar el formulario
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Subir Comprobante</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body { background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; display: flex; align-items: center; }
+            .card { max-width: 500px; margin: 0 auto; border-radius: 20px; }
+        </style>
+    </head>
+    <body>
+    <div class="container">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4">Subir Comprobante</h2>
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="plan" value="Membresía Mensual">
+                    <input type="hidden" name="precio" value="99.90">
+                    
+                    <div class="mb-4 text-center">
+                        <div class="border border-3 border-dashed rounded-4 p-5 bg-light">
+                            <i class="fas fa-cloud-upload-alt fa-4x text-muted mb-3"></i>
+                            <p class="fw-bold">Haz clic para subir tu comprobante</p>
+                            <input type="file" name="comprobante" accept="image/*,.pdf" required 
+                                   class="form-control form-control-lg" style="margin-top: 15px;">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success btn-lg w-100">
+                        ENVIAR COMPROBANTE
+                    </button>
+                    <a href="/planes" class="btn btn-outline-secondary w-100 mt-2">Volver</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    </body>
+    </html>
+    '''
 
 @app.route('/usuario')
 @login_required
 def usuario_dashboard():
     # Verificar que sea miembro
     if session.get('user_type') != 'miembro':
-        # Si es admin, redirigir al panel admin
         if session.get('user_type') == 'admin':
             return redirect('/')
-        # Si no es ni miembro ni admin, cerrar sesión
         else:
             session.clear()
             return redirect('/login')
@@ -1934,7 +1990,56 @@ def usuario_dashboard():
         miembro.codigo_qr = qr_data
         db.session.commit()
 
-    return render_template_string(USUARIO_HTML, miembro=miembro, qr_image=qr_image)
+    # ==================== CUENTA REGRESIVA TIPO RELOJ ====================
+    from datetime import datetime, timedelta
+
+    countdown_html = '<div class="text-center my-4"><small class="text-muted">Sin membresía activa</small></div>'
+
+    if miembro.fecha_fin and miembro.estado == 'Activa':
+        try:
+            fecha_fin_dt = datetime.strptime(miembro.fecha_fin, '%Y-%m-%d')
+            ahora = datetime.now()
+            diferencia = fecha_fin_dt - ahora
+
+            if diferencia.total_seconds() > 0:
+                dias = diferencia.days
+                horas, resto = divmod(diferencia.seconds, 3600)
+                minutos, _ = divmod(resto, 60)
+
+                if dias > 0:
+                    countdown_html = f'''
+                    <div class="text-center my-4 p-4 bg-light rounded shadow">
+                        <h5 class="text-success mb-3">Tu membresía vence en:</h5>
+                        <h1 class="display-4 fw-bold text-success">{dias} <small class="fs-3">días</small></h1>
+                    </div>
+                    '''
+                else:
+                    countdown_html = f'''
+                    <div class="text-center my-4 p-4 bg-warning rounded shadow">
+                        <h5 class="text-dark mb-3">¡Vence en menos de 24 horas!</h5>
+                        <h1 class="display-4 fw-bold text-dark">{horas}h {minutos}m</h1>
+                    </div>
+                    '''
+            else:
+                # Ya venció
+                dias_vencidos = abs(diferencia.days)
+                countdown_html = f'''
+                <div class="text-center my-4 p-4 bg-danger text-white rounded shadow">
+                    <h5 class="mb-3">Membresía vencida</h5>
+                    <h1 class="display-4 fw-bold">Hace {dias_vencidos} día{"s" if dias_vencidos != 1 else ""}</h1>
+                </div>
+                '''
+                # Opcional: marcar como vencida automáticamente
+                if miembro.estado == 'Activa':
+                    miembro.estado = 'Vencida'
+                    db.session.commit()
+
+        except Exception as e:
+            countdown_html = '<div class="text-center text-danger">Error en fecha</div>'
+    # =====================================================================
+
+    return render_template_string(USUARIO_HTML, miembro=miembro, qr_image=qr_image, countdown=countdown_html)
+from datetime import datetime
 
 @app.route('/membresias')
 @admin_required
@@ -1942,18 +2047,34 @@ def membresias():
     admin = Administrador.query.get(session['user_id'])
     if not admin:
         return redirect('/login')
-    
-    miembros = Miembro.query.all()
-    return render_template_string(MEMBRESIAS_HTML, miembros=miembros, admin_nombre=admin.nombre)
 
-# ---------------------------
-# RUTA NUEVA AGREGADA - VERIFICAR PAGO ESPECÍFICO
-# ---------------------------
+    miembros = Miembro.query.all()
+
+    # 🔥 CONVERTIR fecha_fin A datetime SI ES STRING
+    for m in miembros:
+        if isinstance(m.fecha_fin, str):
+            try:
+                # intentamos el formato más común YYYY-MM-DD
+                m.fecha_fin = datetime.strptime(m.fecha_fin, "%Y-%m-%d")
+            except:
+                try:
+                    # formato DD/MM/YYYY
+                    m.fecha_fin = datetime.strptime(m.fecha_fin, "%d/%m/%Y")
+                except:
+                    # si no se puede convertir → dejamos None
+                    m.fecha_fin = None
+
+    return render_template_string(
+        MEMBRESIAS_HTML,
+        miembros=miembros,
+        admin_nombre=admin.nombre,
+        now=datetime.now()   # requerido para días restantes
+    )
+
 
 @app.route('/verificar-pago/<int:miembro_id>')
 @admin_required
 def verificar_pago(miembro_id):
-    """Página para verificar un pago específico"""
     admin = Administrador.query.get(session['user_id'])
     if not admin:
         return redirect('/login')
@@ -1962,61 +2083,97 @@ def verificar_pago(miembro_id):
     if not miembro:
         return redirect('/verificar-pagos')
     
-    return f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Verificar Pago - Control Fit</title>
-        <meta charset="UTF-8">
-        <style>
-            body {{ font-family: Arial; background: #f2f4f7; padding: 20px; }}
-            .container {{ max-width: 800px; margin: 0 auto; }}
-            .header {{ background: #34495e; color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
-            .card {{ background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }}
-            .btn {{ padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }}
-            .btn-success {{ background: #27ae60; color: white; }}
-            .btn-danger {{ background: #e74c3c; color: white; }}
-            .btn-info {{ background: #3498db; color: white; }}
-            .payment-details {{ margin: 20px 0; }}
-            .comprobante-img {{ max-width: 100%; max-height: 500px; border: 1px solid #ddd; border-radius: 5px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>💳 Verificar Pago</h1>
-                <p>Administrador: <strong>{admin.nombre}</strong></p>
-                <div>
-                    <a href="/verificar-pagos" class="btn btn-info">← Volver a Pagos Pendientes</a>
-                    <a href="/logout" class="btn btn-danger" style="float: right;">🚪 Cerrar Sesión</a>
-                </div>
-            </div>
+    # Extraemos solo el nombre del archivo de forma segura
+    comprobante_filename = None
+    if miembro.comprobante_path:
+        comprobante_filename = miembro.comprobante_path.split('\\')[-1].split('/')[-1]
 
-            <div class="card">
-                <h2>Detalles del Pago - {miembro.nombre} {miembro.apellidos or ''}</h2>
-                
-                <div class="payment-details">
-                    <p><strong>Miembro:</strong> {miembro.nombre} {miembro.apellidos or ''}</p>
-                    <p><strong>Email:</strong> {miembro.email}</p>
-                    <p><strong>DNI:</strong> {miembro.dni or 'No registrado'}</p>
-                    <p><strong>Celular:</strong> {miembro.celular or 'No registrado'}</p>
-                    <p><strong>Plan Seleccionado:</strong> {miembro.plan_seleccionado or miembro.tipo_membresia or 'No especificado'}</p>
-                    <p><strong>Fecha de Pago:</strong> {miembro.fecha_pago.strftime('%d/%m/%Y %H:%M') if miembro.fecha_pago else 'No registrada'}</p>
-                    
-                    <p><strong>Comprobante:</strong></p>
-                    {f'<img src="/uploads/{miembro.comprobante_path.split("/")[-1]}" alt="Comprobante" class="comprobante-img">' if miembro.comprobante_path else '<p>No disponible</p>'}
-                </div>
-                
-                <div style="margin-top: 30px;">
-                    <h3>Acciones:</h3>
-                    <a href="/aprobar-pago/{miembro.id}" class="btn btn-success" onclick="return confirm('¿Estás seguro de APROBAR este pago?')">✅ Aprobar Pago y Activar Membresía</a>
-                    <a href="/rechazar-pago/{miembro.id}" class="btn btn-danger" onclick="return confirm('¿Estás seguro de RECHAZAR este pago? Se eliminará el comprobante.')">❌ Rechazar Pago</a>
-                </div>
+    HTML_VERIFICAR_PAGO = '''
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Verificar Pago - Control Fit</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; font-family: 'Segoe UI', sans-serif; }
+        .card { max-width: 900px; margin: 40px auto; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
+        .header { background: linear-gradient(135deg, #2c3e50, #34495e); color: white; padding: 30px; text-align: center; }
+        .comprobante-img { max-width: 100%; max-height: 650px; border-radius: 16px; border: 6px solid #ffc107; box-shadow: 0 15px 40px rgba(0,0,0,0.4); transition: transform 0.3s; }
+        .comprobante-img:hover { transform: scale(1.02); }
+        .info-box { background: #f8f9fa; padding: 20px; border-radius: 12px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h1>Verificar Pago</h1>
+            <p class="fs-4">Administrador: <strong>{{ admin_nombre }}</strong></p>
+            <div class="mt-3">
+                <a href="/verificar-pagos" class="btn btn-light btn-lg">Volver a Pendientes</a>
+                <a href="/logout" class="btn btn-outline-light btn-lg">Cerrar Sesión</a>
             </div>
         </div>
-    </body>
-    </html>
-    '''
+
+        <div class="card-body p-5 bg-white">
+            <h2 class="text-center text-primary mb-4">{{ miembro.nombre }} {{ miembro.apellidos or '' }}</h2>
+
+            <div class="row text-center mb-4 info-box">
+                <div class="col-md-4"><strong>Email:</strong> {{ miembro.email }}</div>
+                <div class="col-md-4"><strong>DNI:</strong> {{ miembro.dni or '—' }}</div>
+                <div class="col-md-4"><strong>Celular:</strong> {{ miembro.celular or '—' }}</div>
+            </div>
+
+            <div class="text-center mb-4">
+                <h4>Plan seleccionado:</h4>
+                <h3 class="text-success fw-bold">{{ miembro.plan_seleccionado or miembro.tipo_membresia or 'No especificado' }}</h3>
+                <p class="text-muted">
+                    Fecha: {{ miembro.fecha_pago.strftime('%d/%m/%Y a las %H:%M') if miembro.fecha_pago else 'No registrada' }}
+                </p>
+            </div>
+
+            <hr class="my-5">
+
+            <h3 class="text-center mb-4">Comprobante de Pago</h3>
+            <div class="text-center">
+                {% if comprobante_filename %}
+                    <a href="{{ url_for('serve_uploaded_file', filename=comprobante_filename) }}" target="_blank">
+                        <img src="{{ url_for('serve_uploaded_file', filename=comprobante_filename) }}" 
+                             alt="Comprobante" class="comprobante-img">
+                    </a>
+                    <div class="mt-4">
+                        <p class="text-success fw-bold fs-4">Click en la imagen para verla en tamaño completo</p>
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger fs-4">No se ha subido ningún comprobante</div>
+                {% endif %}
+            </div>
+
+            <div class="text-center mt-5">
+                <h3>Acciones</h3>
+
+                <!-- SIN CONFIRMACIONES -->
+                <a href="/aprobar-pago/{{ miembro.id }}" 
+                   class="btn btn-success btn-lg px-5 py-3 me-4">Aprobar y Activar</a>
+
+                <a href="/rechazar-pago/{{ miembro.id }}" 
+                   class="btn btn-danger btn-lg px-5 py-3">Rechazar</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+'''
+
+
+    return render_template_string(
+        HTML_VERIFICAR_PAGO,
+        admin_nombre=admin.nombre,
+        miembro=miembro,
+        comprobante_filename=comprobante_filename
+    )
+    
 
 @app.route('/verificar-pagos')
 @admin_required
@@ -2031,9 +2188,13 @@ def verificar_pagos():
         Miembro.pago_verificado == False
     ).all()
     
-    return render_template_string(VERIFICAR_PAGOS_HTML, 
-                                pagos_pendientes=pagos_pendientes, 
-                                admin_nombre=admin.nombre)
+    return render_template_string(
+        VERIFICAR_PAGOS_HTML,
+        pagos_pendientes=pagos_pendientes, 
+        admin_nombre=admin.nombre,
+        url_for=url_for,          # ← obligatorio cuando usas render_template_string
+        request=request           # ← opcional pero recomendado
+    )
 
 @app.route('/aprobar-pago/<int:miembro_id>')
 @admin_required
@@ -2042,20 +2203,13 @@ def aprobar_pago(miembro_id):
     if miembro:
         miembro.pago_verificado = True
         miembro.estado = 'Activa'
-        
+
         # Generar código QR
         qr_image, qr_data = generar_codigo_qr(miembro.id, miembro.dni, miembro.nombre)
         miembro.codigo_qr = qr_data
-        
+
         db.session.commit()
-        
-        return f'''
-        <script>
-            alert("✅ Pago aprobado y QR generado exitosamente");
-            window.location.href = "/verificar-pagos";
-        </script>
-        '''
-    
+
     return redirect('/verificar-pagos')
 
 @app.route('/rechazar-pago/<int:miembro_id>')
@@ -2063,34 +2217,32 @@ def aprobar_pago(miembro_id):
 def rechazar_pago(miembro_id):
     miembro = Miembro.query.get(miembro_id)
     if miembro:
-        # Eliminar comprobante y resetear estado
-        if miembro.comprobante_path and os.path.exists(miembro.comprobante_path):
-            os.remove(miembro.comprobante_path)
-        
+
+        # Eliminar archivo del comprobante
+        if miembro.comprobante_path:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], miembro.comprobante_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
         miembro.comprobante_path = None
         miembro.pago_verificado = False
         miembro.estado = 'Inactiva'
         miembro.plan_seleccionado = None
         miembro.tipo_membresia = 'Por activar'
-        
+
         db.session.commit()
-        
-        return f'''
-        <script>
-            alert("❌ Pago rechazado y comprobante eliminado");
-            window.location.href = "/verificar-pagos";
-        </script>
-        '''
-    
+
     return redirect('/verificar-pagos')
 
 # ---------------------------
 # RUTA NUEVA AGREGADA - SERVIR ARCHIVOS SUBIDOS
 # ---------------------------
 
-@app.route('/uploads/<filename>')
+# ===========================================
+# RUTA PARA VER COMPROBANTES - 100% FUNCIONAL
+# ===========================================
+@app.route('/uploads/<path:filename>')
 def serve_uploaded_file(filename):
-    """Servir archivos subidos desde la carpeta uploads"""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/logout')
@@ -2153,7 +2305,58 @@ with app.app_context():
     except Exception as e:
         print(f"❌ Error al inicializar la base de datos: {e}")
         db.session.rollback()
+import requests
 
+@app.route('/procesar-pago-culqi', methods=['POST'])
+@login_required
+def procesar_pago_culqi():
+    if session.get('user_type') != 'miembro':
+        return jsonify({'success': False, 'error': 'No autorizado'})
+
+    data = request.get_json()
+    token = data['token']
+    precio = float(data['precio'].replace('S/', '').strip())
+
+    payload = {
+        "amount": int(precio * 100),
+        "currency_code": "PEN",
+        "email": data['email'],
+        "source_id": token
+    }
+
+    headers = {
+        
+    }
+
+    try:
+        response = requests.post("https://api.culqi.com/v2/charges", json=payload, headers=headers)
+        result = response.json()
+
+        if response.status_code == 201:
+            # PAGO EXITOSO → ACTIVAR MEMBRESÍA AUTOMÁTICAMENTE
+            miembro = Miembro.query.get(session['user_id'])
+            plan_info = {
+                '1_mes': ('Mensual', 30),
+                '3_meses': ('Trimestral', 90),
+                '6_meses': ('Semestral', 180),
+                '1_anio': ('Anual', 365)
+            }
+            nombre_plan, dias = plan_info.get(data['plan'], ('Mensual', 30))
+            miembro.tipo_membresia = nombre_plan
+            miembro.estado = 'Activa'
+            miembro.pago_verificado = True
+            miembro.fecha_inicio = datetime.now().strftime('%Y-%m-%d')
+            miembro.fecha_fin = (datetime.now() + timedelta(days=dias)).strftime('%Y-%m-%d')
+            qr_image, qr_data = generar_codigo_qr(miembro.id, miembro.dni, miembro.nombre)
+            miembro.codigo_qr = qr_data
+            db.session.commit()
+
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': result.get('user_message', 'Error en el pago')})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 if __name__ == '__main__':
     print("=" * 60)
     print("🏋️  CONTROL FIT - SISTEMA COMPLETO CON PERSISTENCIA")
