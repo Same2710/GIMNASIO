@@ -2305,7 +2305,7 @@ with app.app_context():
     except Exception as e:
         print(f"❌ Error al inicializar la base de datos: {e}")
         db.session.rollback()
-import requests
+
 
 @app.route('/procesar-pago-culqi', methods=['POST'])
 @login_required
